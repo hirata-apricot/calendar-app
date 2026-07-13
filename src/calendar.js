@@ -1,88 +1,86 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
+import ScheduleModal from './ScheduleModal';
 import './calendar.css';
 
 function Calendar() {
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth() + 1; // 1-12
+  const currentMonth = today.getMonth() + 1;
 
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  // schedules: { "YYYY-MM-DD": [{start_time, title}, ...] }
+  // schedules: { "YYYY-MM-DD": [{ id, start_time, title, end_date, end_time, detail }, ...] }
   const [schedules, setSchedules] = useState({});
+
+  // モーダル制御
+  // mode: 'new' | 'view'
+  const [modal, setModal] = useState(null); // null or { mode, dateKey, schedule }
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  // 年・月が変わったらFirestoreからその月分のスケジュールを取得
+  const pad = (n) => String(n).padStart(2, '0');
+
+  // Firestoreからスケジュール取得
+  const fetchSchedules = async () => {
+    const lastDate = new Date(selectedYear, selectedMonth, 0).getDate();
+    const startStr = `${selectedYear}-${pad(selectedMonth)}-01`;
+    const endStr   = `${selectedYear}-${pad(selectedMonth)}-${pad(lastDate)}`;
+
+    try {
+      const q = query(
+        collection(db, 'schedules'),
+        where('start_date', '>=', startStr),
+        where('start_date', '<=', endStr)
+      );
+      const snapshot = await getDocs(q);
+
+      const result = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const dateKey = data.start_date;
+        if (!result[dateKey]) result[dateKey] = [];
+        result[dateKey].push({
+          id:         doc.id,
+          start_date: data.start_date ?? '',
+          start_time: data.start_time ?? '',
+          end_date:   data.end_date   ?? '',
+          end_time:   data.end_time   ?? '',
+          title:      data.title      ?? '',
+          detail:     data.detail     ?? '',
+        });
+      });
+
+      Object.keys(result).forEach((key) => {
+        result[key].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      });
+
+      setSchedules(result);
+    } catch (err) {
+      console.error('Firestore取得エラー:', err);
+    }
+  };
+
   useEffect(() => {
-    const fetchSchedules = async () => {
-      // 月の開始日・終了日（YYYY-MM-DD文字列）
-      const pad = (n) => String(n).padStart(2, '0');
-      const lastDate = new Date(selectedYear, selectedMonth, 0).getDate();
-      const startStr = `${selectedYear}-${pad(selectedMonth)}-01`;
-      const endStr = `${selectedYear}-${pad(selectedMonth)}-${pad(lastDate)}`;
-
-      try {
-        const q = query(
-          collection(db, 'schedules'),
-          where('start_date', '>=', startStr),
-          where('start_date', '<=', endStr)
-        );
-        const snapshot = await getDocs(q);
-
-        const result = {};
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const dateKey = data.start_date; // "YYYY-MM-DD"
-          if (!result[dateKey]) result[dateKey] = [];
-          result[dateKey].push({
-            start_time: data.start_time ?? '',
-            title: data.title ?? '',
-          });
-        });
-
-        // 同じ日の複数スケジュールをstart_time順にソート
-        Object.keys(result).forEach((key) => {
-          result[key].sort((a, b) => a.start_time.localeCompare(b.start_time));
-        });
-
-        setSchedules(result);
-      } catch (err) {
-        console.error('Firestore取得エラー:', err);
-      }
-    };
-
     fetchSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, selectedMonth]);
 
-  // 月の最初の日と最後の日を取得
-  const firstDay = new Date(selectedYear, selectedMonth - 1, 1);
-  const lastDay = new Date(selectedYear, selectedMonth, 0);
-
-  // 月曜始まりに合わせた開始オフセット（月曜=0, 火曜=1, ..., 日曜=6）
+  // カレンダーセル生成
+  const firstDay    = new Date(selectedYear, selectedMonth - 1, 1);
+  const lastDay     = new Date(selectedYear, selectedMonth, 0);
   const startOffset = (firstDay.getDay() + 6) % 7;
-  const totalDays = lastDay.getDate();
+  const totalDays   = lastDay.getDate();
 
-  // カレンダーのセルを生成
   const cells = [];
-  for (let i = 0; i < startOffset; i++) {
-    cells.push(null);
-  }
-  for (let d = 1; d <= totalDays; d++) {
-    cells.push(d);
-  }
-  while (cells.length % 7 !== 0) {
-    cells.push(null);
-  }
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= totalDays; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
 
-  // 週ごとに分割
   const weeks = [];
-  for (let i = 0; i < cells.length; i += 7) {
-    weeks.push(cells.slice(i, i + 7));
-  }
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
   const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
 
@@ -91,10 +89,27 @@ function Calendar() {
     selectedMonth === today.getMonth() + 1 &&
     selectedYear === today.getFullYear();
 
-  // 日付からFirestoreキー "YYYY-MM-DD" を生成
-  const toDateKey = (day) => {
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${selectedYear}-${pad(selectedMonth)}-${pad(day)}`;
+  const toDateKey = (day) =>
+    `${selectedYear}-${pad(selectedMonth)}-${pad(day)}`;
+
+  // 日付数字をクリック → 新規登録
+  const handleDayNumberClick = (e, day) => {
+    e.stopPropagation();
+    if (!day) return;
+    setModal({ mode: 'new', dateKey: toDateKey(day), schedule: null });
+  };
+
+  // 予定アイテムをクリック → 閲覧
+  const handleScheduleClick = (e, schedule) => {
+    e.stopPropagation();
+    setModal({ mode: 'view', dateKey: schedule.start_date, schedule });
+  };
+
+  const handleModalClose = () => setModal(null);
+
+  const handleModalSaved = () => {
+    setModal(null);
+    fetchSchedules();
   };
 
   return (
@@ -127,10 +142,7 @@ function Calendar() {
         <thead>
           <tr>
             {dayNames.map((name, i) => (
-              <th
-                key={name}
-                className={i === 5 ? 'sat' : i === 6 ? 'sun' : ''}
-              >
+              <th key={name} className={i === 5 ? 'sat' : i === 6 ? 'sun' : ''}>
                 {name}
               </th>
             ))}
@@ -140,27 +152,36 @@ function Calendar() {
           {weeks.map((week, wi) => (
             <tr key={wi}>
               {week.map((day, di) => {
-                const dateKey = day ? toDateKey(day) : null;
+                const dateKey      = day ? toDateKey(day) : null;
                 const daySchedules = dateKey ? (schedules[dateKey] || []) : [];
                 return (
                   <td
                     key={di}
-                    className={
-                      [
-                        day === null ? 'empty' : '',
-                        di === 5 ? 'sat' : di === 6 ? 'sun' : '',
-                        day && isToday(day) ? 'today' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')
-                    }
+                    className={[
+                      day === null ? 'empty' : 'has-day',
+                      di === 5 ? 'sat' : di === 6 ? 'sun' : '',
+                      day && isToday(day) ? 'today' : '',
+                    ].filter(Boolean).join(' ')}
                   >
                     {day && (
                       <>
-                        <span className="cell-day">{day}</span>
+                        {/* 日付数字：クリックで新規登録 */}
+                        <span
+                          className="cell-day"
+                          onClick={(e) => handleDayNumberClick(e, day)}
+                          title="クリックして予定を追加"
+                        >
+                          {day}
+                        </span>
+
+                        {/* 予定一覧：クリックで閲覧 */}
                         <div className="cell-schedules">
-                          {daySchedules.map((s, si) => (
-                            <div key={si} className="schedule-item">
+                          {daySchedules.map((s) => (
+                            <div
+                              key={s.id}
+                              className="schedule-item"
+                              onClick={(e) => handleScheduleClick(e, s)}
+                            >
                               {s.start_time && (
                                 <span className="schedule-time">{s.start_time}</span>
                               )}
@@ -177,6 +198,16 @@ function Calendar() {
           ))}
         </tbody>
       </table>
+
+      {modal && (
+        <ScheduleModal
+          mode={modal.mode}
+          dateKey={modal.dateKey}
+          schedule={modal.schedule}
+          onClose={handleModalClose}
+          onSaved={handleModalSaved}
+        />
+      )}
     </div>
   );
 }
