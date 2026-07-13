@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "apricot-226b5"
-  }
+  },
+  "targets": {
+    "apricot-226b5": {
+      "hosting": {
+        "calendar-app": [
+          "apricot-calendar"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
