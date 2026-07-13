@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "target": "calendar-app",
     "public": "build",
     "ignore": [
       "firebase.json",
