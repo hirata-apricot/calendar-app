@@ -112,6 +112,12 @@
   margin-top: 2px;
 }
 
+.holiday-name {
+  font-size: 0.75rem;
+  color: #c62828;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
 .schedule-item {
   display: flex;
   flex-wrap: nowrap;

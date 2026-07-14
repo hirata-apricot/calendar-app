@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
-import ScheduleModal from './ScheduleModal';
-import './calendar.css';
+import React, { useState, useEffect } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "./firebase";
+import ScheduleModal from "./ScheduleModal";
+import "./calendar.css";
+import * as holiday_jp from "@holiday-jp/holiday_jp";
 
 function Calendar() {
   const today = new Date();
@@ -21,19 +22,19 @@ function Calendar() {
   const years = [currentYear - 1, currentYear, currentYear + 1];
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  const pad = (n) => String(n).padStart(2, '0');
+  const pad = (n) => String(n).padStart(2, "0");
 
   // Firestoreからスケジュール取得
   const fetchSchedules = async () => {
     const lastDate = new Date(selectedYear, selectedMonth, 0).getDate();
     const startStr = `${selectedYear}-${pad(selectedMonth)}-01`;
-    const endStr   = `${selectedYear}-${pad(selectedMonth)}-${pad(lastDate)}`;
+    const endStr = `${selectedYear}-${pad(selectedMonth)}-${pad(lastDate)}`;
 
     try {
       const q = query(
-        collection(db, 'schedules'),
-        where('start_date', '>=', startStr),
-        where('start_date', '<=', endStr)
+        collection(db, "schedules"),
+        where("start_date", ">=", startStr),
+        where("start_date", "<=", endStr),
       );
       const snapshot = await getDocs(q);
 
@@ -43,13 +44,13 @@ function Calendar() {
         const dateKey = data.start_date;
         if (!result[dateKey]) result[dateKey] = [];
         result[dateKey].push({
-          id:         doc.id,
-          start_date: data.start_date ?? '',
-          start_time: data.start_time ?? '',
-          end_date:   data.end_date   ?? '',
-          end_time:   data.end_time   ?? '',
-          title:      data.title      ?? '',
-          detail:     data.detail     ?? '',
+          id: doc.id,
+          start_date: data.start_date ?? "",
+          start_time: data.start_time ?? "",
+          end_date: data.end_date ?? "",
+          end_time: data.end_time ?? "",
+          title: data.title ?? "",
+          detail: data.detail ?? "",
         });
       });
 
@@ -59,7 +60,7 @@ function Calendar() {
 
       setSchedules(result);
     } catch (err) {
-      console.error('Firestore取得エラー:', err);
+      console.error("Firestore取得エラー:", err);
     }
   };
 
@@ -69,10 +70,10 @@ function Calendar() {
   }, [selectedYear, selectedMonth]);
 
   // カレンダーセル生成
-  const firstDay    = new Date(selectedYear, selectedMonth - 1, 1);
-  const lastDay     = new Date(selectedYear, selectedMonth, 0);
+  const firstDay = new Date(selectedYear, selectedMonth - 1, 1);
+  const lastDay = new Date(selectedYear, selectedMonth, 0);
   const startOffset = (firstDay.getDay() + 6) % 7;
-  const totalDays   = lastDay.getDate();
+  const totalDays = lastDay.getDate();
 
   const cells = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
@@ -82,7 +83,7 @@ function Calendar() {
   const weeks = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-  const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+  const dayNames = ["月", "火", "水", "木", "金", "土", "日"];
 
   const isToday = (day) =>
     day === today.getDate() &&
@@ -96,13 +97,13 @@ function Calendar() {
   const handleDayNumberClick = (e, day) => {
     e.stopPropagation();
     if (!day) return;
-    setModal({ mode: 'new', dateKey: toDateKey(day), schedule: null });
+    setModal({ mode: "new", dateKey: toDateKey(day), schedule: null });
   };
 
   // 予定アイテムをクリック → 閲覧
   const handleScheduleClick = (e, schedule) => {
     e.stopPropagation();
-    setModal({ mode: 'view', dateKey: schedule.start_date, schedule });
+    setModal({ mode: "view", dateKey: schedule.start_date, schedule });
   };
 
   const handleModalClose = () => setModal(null);
@@ -115,34 +116,38 @@ function Calendar() {
   return (
     <div className="calendar-container">
       <div className="calendar-header">
-        <label htmlFor="year-select">年：</label>
         <select
           id="year-select"
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
         >
           {years.map((y) => (
-            <option key={y} value={y}>{y}年</option>
+            <option key={y} value={y}>
+              {y}
+            </option>
           ))}
         </select>
+        <label htmlFor="year-select">年</label>
 
-        <label htmlFor="month-select">月：</label>
         <select
           id="month-select"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(Number(e.target.value))}
         >
           {months.map((m) => (
-            <option key={m} value={m}>{m}月</option>
+            <option key={m} value={m}>
+              {m}
+            </option>
           ))}
         </select>
+        <label htmlFor="month-select">月</label>
       </div>
 
       <table className="calendar-table">
         <thead>
           <tr>
             {dayNames.map((name, i) => (
-              <th key={name} className={i === 5 ? 'sat' : i === 6 ? 'sun' : ''}>
+              <th key={name} className={i === 5 ? "sat" : i === 6 ? "sun" : ""}>
                 {name}
               </th>
             ))}
@@ -152,16 +157,23 @@ function Calendar() {
           {weeks.map((week, wi) => (
             <tr key={wi}>
               {week.map((day, di) => {
-                const dateKey      = day ? toDateKey(day) : null;
-                const daySchedules = dateKey ? (schedules[dateKey] || []) : [];
+                const dateKey = day ? toDateKey(day) : null;
+                const daySchedules = dateKey ? schedules[dateKey] || [] : [];
+                const holiday = holiday_jp.between(
+                  new Date(selectedYear, selectedMonth - 1, day),
+                  new Date(selectedYear, selectedMonth - 1, day),
+                );
+                const isHoliday = holiday.length > 0;
                 return (
                   <td
                     key={di}
                     className={[
-                      day === null ? 'empty' : 'has-day',
-                      di === 5 ? 'sat' : di === 6 ? 'sun' : '',
-                      day && isToday(day) ? 'today' : '',
-                    ].filter(Boolean).join(' ')}
+                      day === null ? "empty" : "has-day",
+                      di === 5 ? "sat" : di === 6 || isHoliday ? "sun" : "",
+                      day && isToday(day) ? "today" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
                     {day && (
                       <>
@@ -176,6 +188,12 @@ function Calendar() {
 
                         {/* 予定一覧：クリックで閲覧 */}
                         <div className="cell-schedules">
+                          {isHoliday && (
+                            // 祝日名表示
+                            <div className="holiday-name">
+                              {holiday[0].name}
+                            </div>
+                          )}
                           {daySchedules.map((s) => (
                             <div
                               key={s.id}
@@ -183,7 +201,9 @@ function Calendar() {
                               onClick={(e) => handleScheduleClick(e, s)}
                             >
                               {s.start_time && (
-                                <span className="schedule-time">{s.start_time}</span>
+                                <span className="schedule-time">
+                                  {s.start_time}
+                                </span>
                               )}
                               <span className="schedule-title">{s.title}</span>
                             </div>
