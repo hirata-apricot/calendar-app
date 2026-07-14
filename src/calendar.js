@@ -116,6 +116,19 @@ function Calendar() {
   return (
     <div className="calendar-container">
       <div className="calendar-header">
+        <button
+          className="prev-month"
+          onClick={() => {
+            if (selectedMonth === 1) {
+              setSelectedYear(selectedYear - 1);
+              setSelectedMonth(12);
+            } else {
+              setSelectedMonth(selectedMonth - 1);
+            }
+          }}
+        >
+          &lt;
+        </button>
         <select
           id="year-select"
           value={selectedYear}
@@ -141,6 +154,19 @@ function Calendar() {
           ))}
         </select>
         <label htmlFor="month-select">月</label>
+        <button
+          className="next-month"
+          onClick={() => {
+            if (selectedMonth === 12) {
+              setSelectedYear(selectedYear + 1);
+              setSelectedMonth(1);
+            } else {
+              setSelectedMonth(selectedMonth + 1);
+            }
+          }}
+        >
+          &gt;
+        </button>
       </div>
 
       <table className="calendar-table">

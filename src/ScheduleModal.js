@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import React, { useState } from "react";
+import {
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { db } from "./firebase";
 
 /**
  * ScheduleModal
@@ -12,24 +18,30 @@ import { db } from './firebase';
  *   onClose  : () => void
  *   onSaved  : () => void      （保存・削除完了後にカレンダーを再取得させる）
  */
-function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved }) {
+function ScheduleModal({
+  mode: initialMode,
+  dateKey,
+  schedule,
+  onClose,
+  onSaved,
+}) {
   // 内部モード管理（view → edit に昇格できる）
   const [mode, setMode] = useState(initialMode);
 
   // フォーム値（新規は空、閲覧/編集は既存値で初期化）
-  const [startTime, setStartTime] = useState(schedule?.start_time ?? '');
-  const [endDate,   setEndDate]   = useState(schedule?.end_date   ?? dateKey);
-  const [endTime,   setEndTime]   = useState(schedule?.end_time   ?? '');
-  const [title,     setTitle]     = useState(schedule?.title      ?? '');
-  const [detail,    setDetail]    = useState(schedule?.detail     ?? '');
+  const [startTime, setStartTime] = useState(schedule?.start_time ?? "");
+  const [endDate, setEndDate] = useState(schedule?.end_date ?? dateKey);
+  const [endTime, setEndTime] = useState(schedule?.end_time ?? "");
+  const [title, setTitle] = useState(schedule?.title ?? "");
+  const [detail, setDetail] = useState(schedule?.detail ?? "");
 
-  const [saving,   setSaving]   = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error,    setError]    = useState('');
+  const [error, setError] = useState("");
 
-  const isView = mode === 'view';
-  const isEdit = mode === 'edit';
-  const isNew  = mode === 'new';
+  const isView = mode === "view";
+  const isEdit = mode === "edit";
+  const isNew = mode === "new";
 
   // 開始日（新規はdateKey、閲覧・編集は既存のstart_date）
   const startDate = isNew ? dateKey : (schedule?.start_date ?? dateKey);
@@ -38,35 +50,35 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('見出しは必須です。');
+      setError("見出しは必須です。");
       return;
     }
     setSaving(true);
-    setError('');
+    setError("");
     try {
       if (isNew) {
-        await addDoc(collection(db, 'schedules'), {
+        await addDoc(collection(db, "schedules"), {
           start_date: startDate,
           start_time: startTime,
-          end_date:   endDate,
-          end_time:   endTime,
-          title:      title.trim(),
-          detail:     detail,
+          end_date: endDate,
+          end_time: endTime,
+          title: title.trim(),
+          detail: detail,
         });
       } else {
         // edit
-        await updateDoc(doc(db, 'schedules', schedule.id), {
+        await updateDoc(doc(db, "schedules", schedule.id), {
           start_time: startTime,
-          end_date:   endDate,
-          end_time:   endTime,
-          title:      title.trim(),
-          detail:     detail,
+          end_date: endDate,
+          end_time: endTime,
+          title: title.trim(),
+          detail: detail,
         });
       }
       onSaved();
     } catch (err) {
-      console.error('Firestore保存エラー:', err);
-      setError('保存に失敗しました。再度お試しください。');
+      console.error("Firestore保存エラー:", err);
+      setError("保存に失敗しました。再度お試しください。");
       setSaving(false);
     }
   };
@@ -75,13 +87,13 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
   const handleDelete = async () => {
     if (!window.confirm(`「${schedule.title}」を削除しますか？`)) return;
     setDeleting(true);
-    setError('');
+    setError("");
     try {
-      await deleteDoc(doc(db, 'schedules', schedule.id));
+      await deleteDoc(doc(db, "schedules", schedule.id));
       onSaved();
     } catch (err) {
-      console.error('Firestore削除エラー:', err);
-      setError('削除に失敗しました。再度お試しください。');
+      console.error("Firestore削除エラー:", err);
+      setError("削除に失敗しました。再度お試しください。");
       setDeleting(false);
     }
   };
@@ -92,26 +104,40 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
   };
 
   // ---- タイトル文字列 ----
-  const modalTitle = isNew ? '予定を登録' : isEdit ? '予定を編集' : '予定の詳細';
+  const modalTitle = isNew
+    ? "予定を登録"
+    : isEdit
+      ? "予定を編集"
+      : "予定の詳細";
 
   return (
     <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         {/* ヘッダー */}
         <div className="modal-header">
           <h2 id="modal-title">{modalTitle}</h2>
-          <button className="modal-close" onClick={onClose} aria-label="閉じる">×</button>
+          <button className="modal-close" onClick={onClose} aria-label="閉じる">
+            ×
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
-
           {/* 日付・時間（1行） */}
           <div className="form-row">
             <label>日付</label>
             <div className="date-range-row">
               {/* 開始日（常に編集不可） */}
-              <input type="text" value={startDate} readOnly className="input-readonly input-date" />
+              <input
+                type="text"
+                value={startDate}
+                readOnly
+                className="input-readonly input-date"
+              />
               {/* 開始時間 */}
               <input
                 id="start-time"
@@ -119,17 +145,17 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 readOnly={isView}
-                className={`input-time${isView ? ' input-readonly' : ''}`}
+                className={`input-time${isView ? " input-readonly" : ""}`}
               />
               <span className="date-range-sep">〜</span>
               {/* 終了日 */}
               <input
                 id="end-date"
-                type={isView ? 'text' : 'date'}
+                type={isView ? "text" : "date"}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 readOnly={isView}
-                className={`input-date${isView ? ' input-readonly' : ''}`}
+                className={`input-date${isView ? " input-readonly" : ""}`}
               />
               {/* 終了時間 */}
               <input
@@ -138,24 +164,24 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 readOnly={isView}
-                className={`input-time${isView ? ' input-readonly' : ''}`}
+                className={`input-time${isView ? " input-readonly" : ""}`}
               />
             </div>
           </div>
 
-          {/* 見出し */}
+          {/* 表題 */}
           <div className="form-row">
             <label htmlFor="modal-title-input">
-              見出し {!isView && <span className="required">*</span>}
+              表題 {!isView && <span className="required">*</span>}
             </label>
             <input
               id="modal-title-input"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isView ? '' : '見出しを入力'}
+              placeholder={isView ? "" : "表題を入力"}
               readOnly={isView}
-              className={isView ? 'input-readonly' : ''}
+              className={isView ? "input-readonly" : ""}
               required={!isView}
             />
           </div>
@@ -167,10 +193,10 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
               id="detail"
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
-              placeholder={isView ? '' : '詳細を入力'}
+              placeholder={isView ? "" : "詳細を入力"}
               rows={4}
               readOnly={isView}
-              className={isView ? 'input-readonly' : ''}
+              className={isView ? "input-readonly" : ""}
             />
           </div>
 
@@ -187,16 +213,20 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
                   onClick={handleDelete}
                   disabled={deleting}
                 >
-                  {deleting ? '削除中...' : '削除'}
+                  {deleting ? "削除中..." : "削除"}
                 </button>
                 <div className="modal-actions-right">
-                  <button type="button" className="btn-cancel" onClick={onClose}>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={onClose}
+                  >
                     閉じる
                   </button>
                   <button
                     type="button"
                     className="btn-save"
-                    onClick={() => setMode('edit')}
+                    onClick={() => setMode("edit")}
                   >
                     編集
                   </button>
@@ -211,18 +241,17 @@ function ScheduleModal({ mode: initialMode, dateKey, schedule, onClose, onSaved 
                   <button
                     type="button"
                     className="btn-cancel"
-                    onClick={isEdit ? () => setMode('view') : onClose}
+                    onClick={isEdit ? () => setMode("view") : onClose}
                   >
                     キャンセル
                   </button>
                   <button type="submit" className="btn-save" disabled={saving}>
-                    {saving ? '保存中...' : '保存'}
+                    {saving ? "保存中..." : "保存"}
                   </button>
                 </div>
               </>
             )}
           </div>
-
         </form>
       </div>
     </div>

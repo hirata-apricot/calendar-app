@@ -164,7 +164,7 @@
   border-radius: 8px;
   padding: 24px 28px;
   width: 100%;
-  max-width: 560px;
+  max-width: 650px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
 
@@ -197,7 +197,7 @@
 /* ===== フォーム行 ===== */
 .form-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
   margin-bottom: 14px;
 }
@@ -206,6 +206,7 @@
   font-size: 0.85rem;
   font-weight: bold;
   color: #444;
+  width: 80px;
 }
 
 .form-row input[type="text"],
